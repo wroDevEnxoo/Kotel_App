@@ -1,10 +1,11 @@
-import { LightningElement, api } from 'lwc';
+import { LightningElement, api, track } from 'lwc';
+import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 
 export default class LwcCatRegistration extends LightningElement {
-    @api name;
-    @api startDate;
-    @api endDate;
-    @api targetHotel = {
+    @track name;
+    @track startDate;
+    @track endDate;
+    @track targetHotel = {
         name:'sample Name',
         id:'124391290412'
     };
@@ -14,11 +15,43 @@ export default class LwcCatRegistration extends LightningElement {
     a następnie ustawiamy to w naszym inpucie jako wartość
     */ 
 
+   constructor() {
+        super();
+        //this.template.addEventListener('dataProvider', this.updateComponent());
+    }
+
     handleChange(event) {
         this[event.target.name] = event.target.value;
     }
 
     handleRegistration(event) {
-        
+        const visitId = undefined; //TODO: wywołanie funkcji Kuby
+        let [message, variant] = this.getToastParametersForVisit(visitId);
+        this.showToast(message, variant);
     }
+
+    getToastParametersForVisit(visitId) {
+        let message, variant;
+        if (typeof visitId == 'undefined') {
+            message = 'Registration failed.';
+            variant = 'error';
+        } else {
+            message = `A cat ${this.name} has booked a visit (ID: ${visitId}) in hotel ${this.targetHotel.name} from ${this.startDate} to ${this.endDate}`;
+            variant = 'success';
+        }
+        return [message, variant];
+    }
+
+    showToast(message, variant) {
+        this.dispatchEvent(
+            new ShowToastEvent({
+                title: 'Registation result',
+                message: message,
+                variant: variant,
+                mode: 'sticky'
+            })
+        );
+    }
+
+
 }
