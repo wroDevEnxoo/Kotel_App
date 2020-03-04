@@ -1,7 +1,6 @@
 <template>
     <lightning-card title="Register Your Cat">
         <div class="slds-p-horizontal_small">
-            <!-- <lightning-input name="name" label="Name" value={name} onchange={handleChange}></lightning-input> -->
             <c-lookup 
                 selection={initialSelection}
                 errors={errors}
@@ -22,10 +21,8 @@
                 placeholder="Search a Hotel"
                 is-multi-entry={isMultiEntry}>
             </c-lookup>
-            <!-- chwiliwo attribute value inputa targetHotel jest zahardkodowane, później będziemy dostawać to od komponentu mapy-->
-            <!-- <lightning-input name="targetHotel" label="Target Hotel" value={targetHotel.name} onchange={handleChange}></lightning-input> -->
-            <lightning-input name="startDate" label="Start Date" value={startDate} type="date" onchange={handleChange}></lightning-input>
-            <lightning-input name="endDate" label="End Date" value={endDate} type="date" onchange={handleChange}></lightning-input>
+            <lightning-input name="startDate" label="Start Date" value={startDate} min={today} type="date" onchange={handleChange}></lightning-input>
+            <lightning-input name="endDate" label="End Date" value={endDate} min={today} type="date" onchange={handleChange}></lightning-input>
         </div>
         <div slot="footer">
             <lightning-button name="register" label="Register" variant="brand" onclick={handleRegistration}></lightning-button>

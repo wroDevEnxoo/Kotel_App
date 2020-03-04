@@ -1,36 +1,65 @@
-import { LightningElement, api, track } from 'lwc';
+import { LightningElement, api, wire, track } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import apexSearch from '@salesforce/apex/CustomLookupController.search';
 import insertVisit from '@salesforce/apex/REST_CheckIn.insertVisitProcess';
+// import { getObjectInfo } from 'lightning/uiObjectInfoApi';
+// import CAT_OBJECT from '@salesforce/schema/Cat__c';
+// import CAT_OBJECT_NAME from '@salesforce/schema/Cat__c.Name';
+// import HOTEL_OBJECT from '@salesforce/schema/Hotel__c';
+// import HOTEL_OBJECT_NAME from '@salesforce/schema/Hotel__c.Name';
 
 export default class LwcCatRegistration extends LightningElement {
     @track cat;
-    @track startDate;
-    @track endDate;
-    @track hotel = {
-        name:'sample Name',
-        id:'124391290412'
-    };
     /* hotel powinniśmy dostać od komponentu mapy. 
     powinno to działać tak że na liście wyników wyszukiwania, przy hotelach będzie button,
     który dispatchuje event setTargetHotel z Id i Name hotelu. My to przechwytujemy
     a następnie ustawiamy to w naszym inpucie jako wartość
     */ 
-   @track isMultiEntry = false;
-   @track initialSelection = [
-    {
-        id: 'na',
-        sObjectType: 'na',
-        icon: 'standard:lightning_component',
-        title: 'Inital selection',
-        subtitle: 'Not a valid record'
-    }
+    @track hotel;
+    @track startDate;
+    @track endDate;
+    @track isMultiEntry = false;
+    @track initialSelection = [
+        {
+            id: 'na',
+            sObjectType: 'na',
+            icon: 'standard:lightning_component',
+            title: 'Inital selection',
+            subtitle: 'Not a valid record'
+        }
     ];
     @track errors = [];
+    @track today = `${new Date().getFullYear()}-${new Date().getMonth()+1}-${new Date().getDate()}`;
+
+    // @track catLabel = '';
+
+    // @wire(getObjectInfo, { objectApiName: CAT_OBJECT })
+    //     wiredOI({err, data}) {
+    //         if (err) {
+    //             console.error(err);
+    //         }
+    //         if (data) {
+    //             this.fieldLabel = data.fields[CAT_OBJECT_NAME.fieldApiName].label
+    //         }
+    //     }
 
    constructor() {
         super();
         //this.template.addEventListener('dataProvider', this.updateComponent());
+    }
+
+    checkForErrors() {
+        const selection = this.template
+            .querySelector('c-lookup')
+            .getSelection();
+        if (selection.length === 0) {
+            this.errors = [
+                { message: 'You must make a selection before submitting!' },
+                { message: 'Please make a selection and try again.' }
+            ];
+        } else {
+            this.errors = [];
+        }
     }
 
     handleChange(event) {
@@ -42,7 +71,52 @@ export default class LwcCatRegistration extends LightningElement {
         console.log('request: ' + JSON.stringify(request));
         const visitId = await insertVisit(request).catch(err => {console.log(err)});
         let [message, variant] = this.getToastParametersForVisit(visitId);
-        this.showToast(message, variant);
+        this.notifyUser('Registration result', message, variant);
+    }
+
+    handleSearch(event) {
+        console.log('search');
+        console.log(JSON.stringify(event.detail));
+        const tableNameString = event.target.name;
+        const request = {
+                            ...event.detail,
+                            tableName: tableNameString
+                        };
+        apexSearch(request)
+            .then(results => {
+                console.log(JSON.stringify(results));
+                if (tableNameString==="Cat__c") {
+                    this.template
+                    .querySelectorAll('c-lookup')[0]
+                    .setSearchResults(results);
+                } else {
+                    this.template
+                    .querySelectorAll('c-lookup')[1]
+                    .setSearchResults(results);
+                }
+            })
+            .catch(error => {
+                this.notifyUser(
+                    'Lookup Error',
+                    'An error occured while searching with the lookup field: ',
+                    'error'
+                );
+                // eslint-disable-next-line no-console
+                console.error('Lookup error', JSON.stringify(error));
+                this.errors = [error];
+            });
+    }
+
+    handleSelectionChange(event) {
+        this.errors = [];
+        const tableNameString = event.target.name;
+        console.log('selection');
+        console.log(JSON.stringify(event.detail));
+        if (tableNameString==="Cat__c") {
+            this.cat = event.detail.selectedItem;
+        } else {
+            this.hotel = event.detail.selectedItem;
+        }
     }
     
     getToastParametersForVisit(visitId) {
@@ -81,78 +155,8 @@ export default class LwcCatRegistration extends LightningElement {
     //     return [message, variant];
     // }
 
-    showToast(message, variant) {
-        this.dispatchEvent(
-            new ShowToastEvent({
-                title: 'Registation result',
-                message: message,
-                variant: variant,
-                mode: 'sticky'
-            })
-        );
-    }
-
-    handleSearch(event) {
-        const tableNameString = event.target.name;
-        const request = {
-                            ...event.detail,
-                            tableName: tableNameString
-                        };
-        apexSearch(request)
-            .then(results => {
-                console.log(JSON.stringify(results));
-                if (tableNameString==="Cat__c") {
-                    this.template
-                    .querySelectorAll('c-lookup')[0]
-                    .setSearchResults(results);
-                    this.cat = results[0];
-                } else {
-                    this.template
-                    .querySelectorAll('c-lookup')[1]
-                    .setSearchResults(results);
-                    this.hotel = results[0];
-                }
-            })
-            .catch(error => {
-                this.notifyUser(
-                    'Lookup Error',
-                    'An error occured while searching with the lookup field: ',
-                    'error'
-                );
-                // eslint-disable-next-line no-console
-                console.error('Lookup error', JSON.stringify(error));
-                this.errors = [error];
-            });
-    }
-
-    handleSelectionChange() {
-        this.errors = [];
-    }
-
-    checkForErrors() {
-        const selection = this.template
-            .querySelector('c-lookup')
-            .getSelection();
-        if (selection.length === 0) {
-            this.errors = [
-                { message: 'You must make a selection before submitting!' },
-                { message: 'Please make a selection and try again.' }
-            ];
-        } else {
-            this.errors = [];
-        }
-    }
-
     notifyUser(title, message, variant) {
-        if (this.notifyViaAlerts) {
-            // Notify via alert
-            // eslint-disable-next-line no-alert
-            alert(`${title}\n${message}`);
-        } else {
-            // Notify via toast
-            const toastEvent = new ShowToastEvent({ title, message, variant });
-            this.dispatchEvent(toastEvent);
-        }
+        const toastEvent = new ShowToastEvent({ title, message, variant });
+        this.dispatchEvent(toastEvent);
     }
-
 }

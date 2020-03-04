@@ -81,7 +81,7 @@ export default class Lookup extends LightningElement {
         if (this.searchThrottlingTimeout) {
             clearTimeout(this.searchThrottlingTimeout);
         }
-        // eslint-disable-next-line @lwc/lwc/no-async-operation
+        //// eslint-disable-next-line @lwc/lwc/no-async-operation
         this.searchThrottlingTimeout = setTimeout(() => {
             // Send search event if search term is long enougth
             if (this.cleanSearchTerm.length >= MINIMAL_SEARCH_TERM_LENGTH) {
@@ -145,7 +145,11 @@ export default class Lookup extends LightningElement {
         this.searchResults = [];
 
         // Notify parent components that selection has changed
-        this.dispatchEvent(new CustomEvent('selectionchange'));
+        this.dispatchEvent(new CustomEvent('selectionchange', {
+            detail: {
+                selectedItem: selectedItem
+            }
+        }));
     }
 
     handleComboboxClick() {
@@ -170,7 +174,7 @@ export default class Lookup extends LightningElement {
             return;
         }
         // Delay hiding combobox so that we can capture selected result
-        // eslint-disable-next-line @lwc/lwc/no-async-operation
+        //// eslint-disable-next-line @lwc/lwc/no-async-operation
         this.blurTimeout = window.setTimeout(() => {
             this.hasFocus = false;
             this.blurTimeout = null;
@@ -181,13 +185,21 @@ export default class Lookup extends LightningElement {
         const recordId = event.currentTarget.name;
         this.selection = this.selection.filter(item => item.id !== recordId);
         // Notify parent components that selection has changed
-        this.dispatchEvent(new CustomEvent('selectionchange'));
+        this.dispatchEvent(new CustomEvent('selectionchange', {
+            detail: {
+                selectedItem: this.selectedItem
+            }
+        }));
     }
 
     handleClearSelection() {
         this.selection = [];
         // Notify parent components that selection has changed
-        this.dispatchEvent(new CustomEvent('selectionchange'));
+        this.dispatchEvent(new CustomEvent('selectionchange', {
+            detail: {
+                selectedItem: this.selectedItem
+            }
+        }));
     }
 
     // STYLE EXPRESSIONS
