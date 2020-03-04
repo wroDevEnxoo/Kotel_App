@@ -1,17 +1,17 @@
 import { LightningElement, api, track } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import apexSearch from '@salesforce/apex/CustomLookupController.search';
-//import insertVisit from '@salesforce/apex/REST_CheckIn.insertVisitProcess';
+import insertVisit from '@salesforce/apex/REST_CheckIn.insertVisitProcess';
 
 export default class LwcCatRegistration extends LightningElement {
-    @track name;
+    @track cat;
     @track startDate;
     @track endDate;
-    @track targetHotel = {
+    @track hotel = {
         name:'sample Name',
         id:'124391290412'
     };
-    /* targetHotel powinniśmy dostać od komponentu mapy. 
+    /* hotel powinniśmy dostać od komponentu mapy. 
     powinno to działać tak że na liście wyników wyszukiwania, przy hotelach będzie button,
     który dispatchuje event setTargetHotel z Id i Name hotelu. My to przechwytujemy
     a następnie ustawiamy to w naszym inpucie jako wartość
@@ -37,23 +37,49 @@ export default class LwcCatRegistration extends LightningElement {
         this[event.target.name] = event.target.value;
     }
 
-    handleRegistration(event) {
-        const visitId = undefined; //TODO: wywołanie funkcji Kuby
+    async handleRegistration(event) {
+        const request = {visitDataJson: JSON.stringify([{Cat: this.cat.id, Hotel: this.hotel.id, StartDate: this.startDate, EndDate: this.endDate}])};
+        console.log('request: ' + JSON.stringify(request));
+        const visitId = await insertVisit(request).catch(err => {console.log(err)});
         let [message, variant] = this.getToastParametersForVisit(visitId);
         this.showToast(message, variant);
     }
-
+    
     getToastParametersForVisit(visitId) {
         let message, variant;
-        if (typeof visitId == 'undefined') {
-            message = 'Registration failed.';
-            variant = 'error';
-        } else {
-            message = `A cat ${this.name} has booked a visit (ID: ${visitId}) in hotel ${this.targetHotel.name} from ${this.startDate} to ${this.endDate}`;
-            variant = 'success';
-        }
+        console.log('visitId: ' + visitId);
+        switch (visitId) {
+            case 400:
+                message = 'Registration failed. Bad request';
+                variant = 'error';
+                break;
+            case 406:
+                message = 'Registration failed. Cat has different reservation at given time';
+                variant = 'error';
+                break;
+            case 200:
+                message = `A cat ${this.cat.title} has booked a visit (ID: ${visitId}) in hotel ${this.hotel.title} from ${this.startDate} to ${this.endDate}`;
+                variant = 'success';
+                break;
+            default:
+                message = `Unknown error: ${visitId}`;
+                variant = 'error';
+          }
+
         return [message, variant];
     }
+
+    // getToastParametersForVisit(visitId) {
+    //     let message, variant;
+    //     if (typeof visitId == 'undefined') {
+    //         message = 'Registration failed.';
+    //         variant = 'error';
+    //     } else {
+    //         message = `A cat ${this.cat.title} has booked a visit (ID: ${visitId}) in hotel ${this.hotel.title} from ${this.startDate} to ${this.endDate}`;
+    //         variant = 'success';
+    //     }
+    //     return [message, variant];
+    // }
 
     showToast(message, variant) {
         this.dispatchEvent(
@@ -66,12 +92,6 @@ export default class LwcCatRegistration extends LightningElement {
         );
     }
 
-    handleLookupTypeChange(event) {
-        this.initialSelection = [];
-        this.errors = [];
-        this.isMultiEntry = event.target.checked;
-    }
-
     handleSearch(event) {
         const tableNameString = event.target.name;
         const request = {
@@ -80,14 +100,17 @@ export default class LwcCatRegistration extends LightningElement {
                         };
         apexSearch(request)
             .then(results => {
+                console.log(JSON.stringify(results));
                 if (tableNameString==="Cat__c") {
                     this.template
                     .querySelectorAll('c-lookup')[0]
                     .setSearchResults(results);
+                    this.cat = results[0];
                 } else {
                     this.template
                     .querySelectorAll('c-lookup')[1]
                     .setSearchResults(results);
+                    this.hotel = results[0];
                 }
             })
             .catch(error => {
@@ -104,13 +127,6 @@ export default class LwcCatRegistration extends LightningElement {
 
     handleSelectionChange() {
         this.errors = [];
-    }
-
-    handleSubmit() {
-        this.checkForErrors();
-        if (this.errors.length === 0) {
-            this.notifyUser('Success', 'The form was submitted.', 'success');
-        }
     }
 
     checkForErrors() {
