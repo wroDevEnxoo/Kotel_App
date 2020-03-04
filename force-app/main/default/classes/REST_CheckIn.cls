@@ -17,17 +17,17 @@ global with sharing class REST_CheckIn{
         List<Map<String,String>> visitDataList;
 
         if(String.isNotBlank(req.requestBody.toString())){
-            visitDataList = (List<Map<String,String>>)JSON.deserialize(req.requestBody.toString(), List<Map<String,String>>.class);
-        }
+            Integer statusCode = insertVisitProcess(req.requestBody.toString());
 
-        Integer statusCode = insertVisitProcess(visitDataList);
-
-        if(statusCode == 200){
-            REST_Utils.setResponse(res, statusCode, 'Inserted correctly');
-        }else if(statusCode == 400){
-            REST_Utils.setResponse(res, statusCode, 'Bad request');
-        }else if(statusCode == 406){
-            REST_Utils.setResponse(res, statusCode, 'Cat has different reservation at given time');
+            if(statusCode == 200){
+                REST_Utils.setResponse(res, statusCode, 'Inserted correctly');
+            }else if(statusCode == 400){
+                REST_Utils.setResponse(res, statusCode, 'Bad request');
+            }else if(statusCode == 406){
+                REST_Utils.setResponse(res, statusCode, 'Cat has different reservation at given time');
+            }
+        }else{
+            REST_Utils.setResponse(res, 400, 'Bad request');
         }
     }
 
@@ -36,7 +36,9 @@ global with sharing class REST_CheckIn{
         
     }
 
-    public static Integer insertVisitProcess(List<Map<String,String>> visitDataList){
+    @AuraEnabled
+    public static Integer insertVisitProcess(String visitDataJson){
+        List<Map<String,String>> visitDataList = (List<Map<String,String>>) JSON.deserialize(visitDataJson, List<Map<String,String>>.class);
         Integer statusCode = 200;
         if(visitDataList != null && !visitDataList.isEmpty()){
 
