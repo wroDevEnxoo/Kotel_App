@@ -21,4 +21,12 @@ global without sharing class REST_Utils {
             return true;
         }
     }
+
+    public static void setResponse(RestResponse res, Integer statusCode, Object responseBodyObject) {
+        res.addHeader('Content-Type', 'application/json');
+        res.statusCode = statusCode;
+        res.responseBody = Blob.valueOf(JSON.serialize(responseBodyObject));
+    }
+
+    
 }
